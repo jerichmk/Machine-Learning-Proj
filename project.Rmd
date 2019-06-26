@@ -1,0 +1,63 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+#Practical Machine Learning Project
+by: Jerich King
+
+##I.Summary
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement - a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: http://web.archive.org/web/20161224072740/http:/groupware.les.inf.puc-rio.br/har (see the section on the Weight Lifting Exercise Dataset).
+
+##II.Data Pre-processing
+Loading the required files, and library.
+
+```{r warning=FALSE,message=FALSE, echo=TRUE}
+library('caret')
+library('randomForest')
+train <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"),na.strings=c("NA","#DIV/0!", ""))
+validation <- read.csv(url("http://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"),na.strings=c("NA","#DIV/0!", ""))
+```
+
+##III.Data Cleaning
+Removing unnecessary data when doing prediction.
+```{r warning=FALSE,message=FALSE, echo=TRUE}
+#Removing Columns
+train <- train[,-c(1:7)]
+
+#Removing NA's
+train <- train[, colSums(is.na(train)) == 0] 
+
+#Removing near zero covariates
+nzv <- nearZeroVar(train,saveMetrics=TRUE)
+train <- train[, nzv$nzv==FALSE]
+```
+
+##IV.Data Partitioning
+```{r warning=FALSE,message=FALSE, echo=TRUE}
+set.seed(1)
+partition <- createDataPartition(train$classe, p=0.8, list=FALSE)
+training <- train[partition, ]
+testing <- train[-partition, ]
+```
+
+##V.Random Forest Model
+```{r warning=FALSE,message=FALSE, echo=TRUE}
+set.seed(1)
+traincontrolset <- trainControl(method="cv", number=3, verboseIter=FALSE)
+RFM <- train(classe ~ ., data=training, method="rf", trControl=traincontrolset)
+RFM
+
+#Predicting
+RFM_predict <- predict(RFM, testing)
+confusionMatrix(testing$classe, RFM_predict)
+```
+
+##VI.Results
+RFM produced a result of 99.52% accuracy and a Kappa of 0.9939.
+
+##VII.Model Validation
+```{r warning=FALSE,message=FALSE, echo=TRUE}
+results <- predict(RFM, newdata=validation)
+results
+```
